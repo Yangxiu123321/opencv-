@@ -80,7 +80,7 @@ bool  BmpDecoder::readHeader()
 {
     bool result = false;
     bool iscolor = false;
-
+	// 用于打开对应文件
     if( !m_buf.empty() )
     {
         if( !m_strm.open( m_buf ) )
@@ -91,22 +91,28 @@ bool  BmpDecoder::readHeader()
 
     CV_TRY
     {
+		// 跳过的这10字节从0000 - 0009基本没有含义
         m_strm.skip( 10 );
+		// 获取双字，就是4字节，000A-000D，是文件开始到位图数据之间的偏移量
         m_offset = m_strm.getDWord();
-
+		// 获取四字节，000E-0011，得到图像描述信息快大小
         int  size = m_strm.getDWord();
         CV_Assert(size > 0); // overflow, 2Gb limit
-
+		//根据不同信息头大小来读取图片信息
         if( size >= 36 )
         {
             m_width  = m_strm.getDWord();
             m_height = m_strm.getDWord();
+
+			//获取四字节，001A-001D，再右移16位，应该是获取图像的颜色数
             m_bpp    = m_strm.getDWord() >> 16;
+			// 获取四字节，001E-0021，获取是否是压缩
             m_rle_code = (BmpCompression)m_strm.getDWord();
             m_strm.skip(12);
             int clrused = m_strm.getDWord();
             m_strm.skip( size - 36 );
 
+			// 到现在为止，已经到跳出了位图文件的整个头部，进入了数据区，那么接下来的工作很自然的就是根据位图文件的颜色数m_bpp来正确的读取数据了
             if( m_width > 0 && m_height != 0 &&
              (((m_bpp == 1 || m_bpp == 4 || m_bpp == 8 ||
                 m_bpp == 24 || m_bpp == 32 ) && m_rle_code == BMP_RGB) ||

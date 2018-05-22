@@ -196,6 +196,7 @@ static ImageDecoder findDecoder( const String& filename ) {
     /// iterate through list of registered codecs
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
+		// 获取数字图像签名的最大值
         size_t len = codecs.decoders[i]->signatureLength();
         maxlen = std::max(maxlen, len);
     }
@@ -207,8 +208,9 @@ static ImageDecoder findDecoder( const String& filename ) {
     if( !f )
         return ImageDecoder();
 
-    // read the file signature
+    /// read the file signature
     String signature(maxlen, ' ');
+	// 返回读到元素的个数
     maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
     fclose(f);
     signature = signature.substr(0, maxlen);
@@ -396,13 +398,15 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     Mat temp, *data = &temp;
 	
     /// Search for the relevant decoder to handle the imagery
+	//.给的是立即数地址，->给的是指针
     ImageDecoder decoder;
-
+	
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
         decoder = GdalDecoder().newDecoder();
     }else{
 #endif
+		//这个是解析图像的后缀名的，用来决定读取特定图像的数据，所有的事情都是它干
         decoder = findDecoder( filename );
 #ifdef HAVE_GDAL
     }
@@ -412,7 +416,7 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
     if( !decoder ){
         return 0;
     }
-
+	
     int scale_denom = 1;
     if( flags > IMREAD_LOAD_GDAL )
     {
@@ -429,10 +433,11 @@ imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 
     /// set the filename in the driver
     decoder->setSource( filename );
-
+	
     CV_TRY
     {
         // read the header to make sure it succeeds
+		//先读入数据头，才好做动态分配内存，然后才能读入像素。
         if( !decoder->readHeader() )
             return 0;
     }
